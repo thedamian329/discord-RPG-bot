@@ -26,6 +26,10 @@ const guide = require("./commands/guide");
 const help = require("./commands/help");
 const scout = require("./commands/scout");
 const dice = require("./commands/dice");
+const gym = require("./commands/training");
+const master = require("./commands/master");
+const guide = require("./commands/guide");
+const help = require("./commands/help");
 
 // Connect to the SQLite database
 let db = new sqlite3.Database("./rpg.db", (err) => {
