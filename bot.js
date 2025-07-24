@@ -20,6 +20,12 @@ const shop = require("./commands/shop");
 const eatbread = require("./commands/eatbread");
 const eatmeat = require("./commands/eatmeat");
 const sell = require("./commands/sell");
+const gym = require("./commands/training");
+const master = require("./commands/master");
+const guide = require("./commands/guide");
+const help = require("./commands/help");
+const scout = require("./commands/scout");
+const dice = require("./commands/dice");
 
 // Connect to the SQLite database
 let db = new sqlite3.Database("./rpg.db", (err) => {
@@ -30,32 +36,11 @@ let db = new sqlite3.Database("./rpg.db", (err) => {
 });
 
 const rulesMessage = `
-**Patch Notes - Version 1.4.0**
-**WHEN YOU DIE YOU NOW START BACK AT LEVEL 1**
-fixed you being able to pickpocket and challenge yourself to a fight.
-You can no longer have negative wood.
-
-
-
-       **Commands:**
-- \`!register\`: register to become a player.
-- \`!profile\`: View your stats and inventory.
-- \`!chop\`: Chop trees to gain wood, experience, and strength.
-- \`!mine\`: Mine stone to gain stone, experience, and strength.
-- \`!fish\`: fish to sell and gain exp.
-- \`!sell[fish][stone]\`: Sell your fish to earn gold.
-- \`!hunt\`: Hunt for meat and gain experience.
-- \`!sneak\`: Practice your stealth.
-- \`!pickpocket [@player]\`: pickpocket a player.
-- \`!fire\`: Sit by the fire to heal.
-- \`!eatbread\`: eat bread.
-- \`!eatmeat\`: eat meat.
-- \`!npc\`: View a list of enemies you can fight.
-- \`!attack [enemy]\`: Engage in battle with an enemy.
-- \`challenge [@player]\`: Challenge a player to a battle. 
-- \`!shop\`: View items available in the shop.
-- \`!buy [item]\`: Purchase an item from the shop.
-- \`!patch\`: see the current patch and patch notes.
+**Patch Notes - Version 2.1.4**
+**ADDED DUNGEON. MUST BE LEVEL 5 TO ENTER. Enemies come in waves, you get 60 seconds to heal to full health or leave the dungeon if you are a pussy**
+  fixed issue where your dungeon wins got reset on death. You also now get to keep the gold you had when you die. Added Training. !training brings up the list
+  of training you can complete. !train [type] will train. You can now get a random gold drop from 1-100 gold while mining. You can get sick and attacked from hunting and 
+  eating the meat. Commands are no longer sent to you, do !help for a full list of commands. 
 `;
 
 //player inventory
@@ -140,6 +125,24 @@ client.on("messageCreate", (message) => {
     case "sell":
       sell(message, command, db, handleLevelUp, client);
       break;
+    case "training":
+      gym(message, command, db, handleLevelUp);
+      break;
+    case "master":
+      master(message, command, client);
+      break;
+    case "guide":
+      guide(message, command, db);
+      break;
+    case "help":
+      help(message, command);
+      break;
+    case "scout":
+      scout(message, db, command, client);
+      break;
+    case "dice":
+      dice(message, command, db);
+      break;
   }
 
   function handleLevelUp(userId) {
@@ -154,8 +157,14 @@ client.on("messageCreate", (message) => {
         let requiredExp = getRequiredExp(row.level);
         if (row.exp >= requiredExp) {
           let newLevel = row.level + 1;
-          let newHealth = getDefaultHealthForLevel(newLevel); // Calculate health based on new level
-          let newStrength = row.strength + 25;
+
+          let currentDefaultHealth = getDefaultHealthForLevel(row.level);
+          let newDefaultHealth = getDefaultHealthForLevel(newLevel);
+
+          let healthExcess = row.health - currentDefaultHealth;
+          let newHealth = newDefaultHealth + Math.max(0, healthExcess);
+
+          let newStrength = row.strength + 50;
 
           db.run(
             `UPDATE users SET level = ?, exp = exp - ?, health = ?, strength = ? WHERE id = ?`,
@@ -187,7 +196,6 @@ client.on("messageCreate", (message) => {
   function resetToLevel1(userId) {
     const defaultHealth = 50;
     const defaultStrength = 10;
-    const defaultGold = 0;
     const defaultFish = 0;
     const defaultMeat = 0;
     const defaultStealth = 0;
@@ -195,14 +203,12 @@ client.on("messageCreate", (message) => {
     const defaultWheat = 0;
     const defaultBread = 0;
     const defaultStone = 0;
-    const defaultDungeon = 0;
 
     db.run(
-      `UPDATE users SET level = 1, exp = 0, health = ?, strength = ?, gold = ?, fish = ?, meat = ?, stealth = ?, wood = ?, wheat = ?, bread = ?, stone = ?, dungeon = ? WHERE id = ?`,
+      `UPDATE users SET level = 1, exp = 0, health = ?, strength = ?, fish = ?, meat = ?, stealth = ?, wood = ?, wheat = ?, bread = ?, stone = ? WHERE id = ?`,
       [
         defaultHealth,
         defaultStrength,
-        defaultGold,
         defaultFish,
         defaultMeat,
         defaultStealth,
@@ -210,7 +216,6 @@ client.on("messageCreate", (message) => {
         defaultWheat,
         defaultBread,
         defaultStone,
-        defaultDungeon,
         userId,
       ],
       (err) => {
@@ -340,6 +345,188 @@ client.on("messageCreate", (message) => {
             }
           );
         }
+      }
+    );
+  }
+  // test enemies for now
+  const dungeonEnemies = {
+    slime: { health: 1000, strength: 150, exp: 100, gold: 50 },
+    wolf: { health: 1500, strength: 300, exp: 200, gold: 100 },
+    goblin: { health: 1000, strength: 500, exp: 300, gold: 150 },
+    orc: { health: 5000, strength: 300, exp: 500, gold: 300 },
+    knight: { health: 7000, strength: 1000, exp: 1500, gold: 1000 },
+    giant: { health: 15000, strength: 2500, exp: 2500, gold: 1500 },
+    dragon: { health: 50000, strength: 10000, exp: 100000, gold: 100000 },
+  };
+
+  if (command === "dungeon") {
+    const enemySequence = ["slime", "wolf", "goblin", "orc", "knight", "giant"];
+    const bossChance = 0.2;
+
+    db.get(
+      `SELECT * FROM users WHERE id = ?`,
+      [message.author.id],
+      (err, player) => {
+        if (err) return console.error(err.message);
+        if (!player)
+          return message.channel.send(
+            "You are not registered. Use !register to sign up."
+          );
+
+        if (player.level < 5) {
+          return message.channel.send(
+            "You must be at least level 5 to enter the dungeon."
+          );
+        }
+        if (player.health < 250) {
+          return message.channel.send(
+            "You must be at full health to enter the dungeon."
+          );
+        }
+
+        let playerHealth = player.health;
+        let totalGoldEarned = 0;
+        let totalExpEarned = 0;
+        let battleLog = `**YOU ENTERED A DUNGEON!**\n\n`;
+        let survivedDungeon = true;
+        let initialHealth = player.health;
+
+        const battleNextEnemy = (index) => {
+          if (index >= enemySequence.length) {
+            if (Math.random() < bossChance) {
+              return handleBossFight();
+            }
+            return completeDungeon();
+          }
+
+          const enemyType = enemySequence[index];
+          const enemy = dungeonEnemies[enemyType];
+          let enemyHealth = enemy.health;
+
+          battleLog += `**Encounter: ${enemyType.toUpperCase()}**\n`;
+
+          while (playerHealth > 0 && enemyHealth > 0) {
+            enemyHealth -= Math.max(0, player.strength);
+            battleLog += `You attack the ${enemyType} for ${player.strength} damage.\n`;
+            if (enemyHealth <= 0) {
+              battleLog += `The ${enemyType} has been defeated!\n\n`;
+              totalGoldEarned += enemy.gold;
+              totalExpEarned += enemy.exp;
+              break;
+            }
+
+            playerHealth -= Math.max(0, enemy.strength);
+            battleLog += `The ${enemyType} attacks you for ${enemy.strength} damage.\n`;
+            if (playerHealth <= 0) {
+              battleLog += `**You have been defeated by the ${enemyType}.**\n\n`;
+              survivedDungeon = false;
+              return handlePlayerDefeat();
+            }
+          }
+
+          message.channel.send(battleLog).then(() => {
+            if (playerHealth > 0) {
+              message.channel.send(
+                "Do you want to heal, continue to the next enemy, or leave the dungeon? Type `!heal` to heal, `!continue` to move on, or `!leave` to exit."
+              );
+
+              const filter = (msg) =>
+                msg.author.id === message.author.id &&
+                ["!heal", "!continue", "!leave"].includes(msg.content);
+              const collector = message.channel.createMessageCollector({
+                filter,
+                max: 1,
+                time: 60000,
+              });
+
+              collector.on("collect", (msg) => {
+                if (msg.content === "!heal") {
+                  playerHealth = initialHealth;
+                  message.channel.send(
+                    `You healed back to your starting health! Your current health is now ${playerHealth}.`
+                  );
+                  battleNextEnemy(index + 1);
+                } else if (msg.content === "!continue") {
+                  battleNextEnemy(index + 1);
+                } else if (msg.content === "!leave") {
+                  message.channel.send("You have left the dungeon.");
+                  completeDungeon(true);
+                }
+              });
+
+              collector.on("end", (collected) => {
+                if (collected.size === 0) {
+                  message.channel.send("Time's up! Moving to the next enemy.");
+                  battleNextEnemy(index + 1);
+                }
+              });
+            }
+          });
+        };
+
+        const handleBossFight = () => {
+          const boss = dungeonEnemies["dragon"];
+          let bossHealth = boss.health;
+          battleLog += `**Boss Fight: DRAGON!**\n\n`;
+
+          while (playerHealth > 0 && bossHealth > 0) {
+            bossHealth -= Math.max(0, player.strength);
+            battleLog += `You attack the Dragon for ${player.strength} damage.\n`;
+            if (bossHealth <= 0) {
+              battleLog += `The Dragon has been defeated!\n\n`;
+              totalGoldEarned += boss.gold;
+              totalExpEarned += boss.exp;
+              return completeDungeon();
+            }
+
+            playerHealth -= Math.max(0, boss.strength);
+            battleLog += `The Dragon attacks you for ${boss.strength} damage.\n`;
+            if (playerHealth <= 0) {
+              battleLog += `You have been defeated by the Dragon.\n`;
+              return handlePlayerDefeat();
+            }
+          }
+        };
+
+        const completeDungeon = (earlyExit = false) => {
+          const finalLog = earlyExit
+            ? `${battleLog}\nYou left the dungeon early. You earned ${totalExpEarned} EXP and ${totalGoldEarned} gold.`
+            : `${battleLog}\nCongratulations! You cleared the dungeon and earned ${totalExpEarned} EXP and ${totalGoldEarned} gold! You have ${playerHealth} health remaining.`;
+
+          // If player left early, don't update the dungeon count
+          const dungeonUpdateQuery = earlyExit
+            ? `UPDATE users SET health = ?, exp = ?, gold = ? WHERE id = ?`
+            : `UPDATE users SET health = ?, exp = ?, gold = ?, dungeon = dungeon + 1 WHERE id = ?`;
+
+          db.run(
+            dungeonUpdateQuery,
+            [
+              playerHealth,
+              player.exp + totalExpEarned,
+              player.gold + totalGoldEarned,
+              message.author.id,
+            ],
+            (err) => {
+              if (err) return console.error(err.message);
+              message.channel.send(finalLog);
+              if (!earlyExit) handleLevelUp(message.author.id); // Only handle level up if they completed the dungeon
+            }
+          );
+        };
+
+        const handlePlayerDefeat = () => {
+          db.run(
+            `UPDATE users SET health = 0, death = death + 1 WHERE id = ?`,
+            [message.author.id],
+            (err) => {
+              if (err) return console.error(err.message);
+              message.channel.send(battleLog);
+              resetToLevel1(message.author.id);
+            }
+          );
+        };
+
+        battleNextEnemy(0);
       }
     );
   }
@@ -475,10 +662,10 @@ client.on("messageCreate", (message) => {
       health: 0,
     },
     wooden_sword: { gold: 100, strength: 10, health: 0 },
-    health_potion: { gold: 75, strength: 0, health: 100 },
+    health_potion: { gold: 75, strength: 0, health: 110 },
     wooden_bow: { gold: 150, strength: 12, health: 0 },
     leather_armor: { gold: 100, strength: 0, health: 10 },
-    sword: { gold: 1000, strength: 50, health: 20 },
+    sword: { gold: 1000, strength: 50, health: 50 },
     bow: { gold: 500, strength: 25, health: 15 },
     steel_sword: { gold: 10000, strength: 150, health: 40 },
     crossbow: { gold: 900, strength: 150, health: 20 },
@@ -491,6 +678,7 @@ client.on("messageCreate", (message) => {
     magic_staff: { gold: 25000, strength: 600, health: 200 },
     lightning_spell: { gold: 35000, strength: 800, health: 250 },
     bacardi: { gold: 100000, strength: 1000, health: -400 },
+    lagunitas: { gold: 1000, strength: 500, health: -10000 },
   };
 
   if (command === "buy") {
@@ -534,6 +722,64 @@ client.on("messageCreate", (message) => {
             }
             message.channel.send(
               `You bought a ${itemName}! Your new stats are:\nGold: ${newGold}\nStrength: ${newStrength}\nHealth: ${newHealth}`
+            );
+          }
+        );
+      }
+    );
+  }
+
+  const training = {
+    novice: { gold: 1000, strength: 100, health: 0 },
+    apprentice: { gold: 5000, strength: 250, health: 100 },
+    master: { gold: 10000, strength: 500, health: 0 },
+  };
+
+  if (command === "train") {
+    const trainingName = args[0];
+    if (!trainingName) {
+      return message.channel.send("Please specify a training name.");
+    }
+
+    const trainType = training[trainingName];
+
+    if (!trainType) {
+      return message.channel.send(
+        "Invalid training name. Please check the training list and try again"
+      );
+    }
+
+    db.get(
+      `SELECT gold, strength, health FROM users WHERE id = ?`,
+      [message.author.id],
+      (err, row) => {
+        if (err) {
+          return console.error(err.message);
+        }
+        if (!row) {
+          return message.channel.send(
+            "You are not registered. Use !register to sign up."
+          );
+        }
+        if (row.gold < trainType.gold) {
+          return message.channel.send(
+            "You do not have enough gold for this training."
+          );
+        }
+
+        const newGold = row.gold - trainType.gold;
+        const newStrength = row.strength + trainType.strength;
+        const newHealth = row.health + trainType.health;
+
+        db.run(
+          `UPDATE users SET gold = ?, strength = ?, health = ? WHERE id = ?`,
+          [newGold, newStrength, newHealth, message.author.id],
+          function (err) {
+            if (err) {
+              return console.error(err.message);
+            }
+            message.channel.send(
+              `You completed ${trainingName} training! Your new stats are: \nGold: ${newGold}\nStrength: ${newStrength}\nHealth: ${newHealth}`
             );
           }
         );
