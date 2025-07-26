@@ -26,10 +26,6 @@ const guide = require("./commands/guide");
 const help = require("./commands/help");
 const scout = require("./commands/scout");
 const dice = require("./commands/dice");
-const gym = require("./commands/training");
-const master = require("./commands/master");
-const guide = require("./commands/guide");
-const help = require("./commands/help");
 
 // Connect to the SQLite database
 let db = new sqlite3.Database("./rpg.db", (err) => {
@@ -442,7 +438,7 @@ client.on("messageCreate", (message) => {
                 max: 1,
                 time: 60000,
               });
-
+              //change how the healing works cause this is just a free heal???
               collector.on("collect", (msg) => {
                 if (msg.content === "!heal") {
                   playerHealth = initialHealth;
@@ -497,7 +493,6 @@ client.on("messageCreate", (message) => {
             ? `${battleLog}\nYou left the dungeon early. You earned ${totalExpEarned} EXP and ${totalGoldEarned} gold.`
             : `${battleLog}\nCongratulations! You cleared the dungeon and earned ${totalExpEarned} EXP and ${totalGoldEarned} gold! You have ${playerHealth} health remaining.`;
 
-          // If player left early, don't update the dungeon count
           const dungeonUpdateQuery = earlyExit
             ? `UPDATE users SET health = ?, exp = ?, gold = ? WHERE id = ?`
             : `UPDATE users SET health = ?, exp = ?, gold = ?, dungeon = dungeon + 1 WHERE id = ?`;

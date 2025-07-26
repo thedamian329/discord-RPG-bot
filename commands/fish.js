@@ -9,7 +9,7 @@ function fish(message, command, db, handleLevelUp) {
         }
         if (!row) {
           return message.channel.send(
-            "You are not registered dumby. Use !register to sign up."
+            "You are not registered. Use !register to sign up."
           );
         }
 
