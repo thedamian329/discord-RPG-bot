@@ -8,9 +8,7 @@ function sell(message, command, db, handleLevelUp, client) {
         `SELECT fish, gold FROM users WHERE id = ?`,
         [message.author.id],
         (err, row) => {
-          if (err) {
-            return console.error(err.message);
-          }
+          if (err) return console.error(err.message);
           if (!row) {
             return message.channel.send(
               "You are not registered. Use !register to sign up."
@@ -23,9 +21,7 @@ function sell(message, command, db, handleLevelUp, client) {
               `UPDATE users SET gold = ?, fish = 0 WHERE id = ?`,
               [row.gold + goldEarned, message.author.id],
               function (err) {
-                if (err) {
-                  return console.error(err.message);
-                }
+                if (err) return console.error(err.message);
                 message.channel.send(
                   `You sold all your fish (${fishSold}) and got ${goldEarned} gold.`
                 );
@@ -41,9 +37,7 @@ function sell(message, command, db, handleLevelUp, client) {
         `SELECT stone, gold FROM users WHERE id = ?`,
         [message.author.id],
         (err, row) => {
-          if (err) {
-            return console.error(err.message);
-          }
+          if (err) return console.error(err.message);
           if (!row) {
             return message.channel.send(
               "You are not registered. Use !register to sign up."
@@ -56,9 +50,7 @@ function sell(message, command, db, handleLevelUp, client) {
               `UPDATE users SET gold = ?, stone = 0 WHERE id = ?`,
               [row.gold + goldEarned, message.author.id],
               function (err) {
-                if (err) {
-                  return console.error(err.message);
-                }
+                if (err) return console.error(err.message);
                 message.channel.send(
                   `You sold all your stone (${stonesSold}) and got ${goldEarned} gold.`
                 );
@@ -69,9 +61,38 @@ function sell(message, command, db, handleLevelUp, client) {
           }
         }
       );
+    } else if (itemToSell === "skin") {
+      db.get(
+        `SELECT skin, gold FROM users WHERE id = ?`,
+        [message.author.id],
+        (err, row) => {
+          if (err) return console.error(err.message);
+          if (!row) {
+            return message.channel.send(
+              "You are not registered. Use !register to signup."
+            );
+          }
+          if (row.skin > 0) {
+            const skinSold = row.skin;
+            const goldEarned = skinSold * 5;
+            db.run(
+              `UPDATE users SET gold = ?, skin = 0 WHERE id = ?`,
+              [row.gold + goldEarned, message.author.id],
+              function (err) {
+                if (err) return console.error(err.message);
+                message.channel.send(
+                  `You sold all your skins (${skinSold}) and got ${goldEarned} gold.`
+                );
+              }
+            );
+          } else {
+            message.channel.send("You don't have any skins to sell.");
+          }
+        }
+      );
     } else {
       message.channel.send(
-        "Invalid item to sell. Use !sell fish or !sell stone."
+        "Invalid item to sell. Use `!sell fish`, `!sell stone`, or `!sell skin`."
       );
     }
   }

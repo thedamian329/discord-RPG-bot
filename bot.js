@@ -26,6 +26,7 @@ const guide = require("./commands/guide");
 const help = require("./commands/help");
 const scout = require("./commands/scout");
 const dice = require("./commands/dice");
+const skin = require("./commands/skin");
 
 // Connect to the SQLite database
 let db = new sqlite3.Database("./rpg.db", (err) => {
@@ -51,6 +52,7 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
   gold INT DEFAULT 0,
   fish INT DEFAULT 0,
   meat INT DEFAULT 0,
+  skin INT DEFAULT 0,
   pvp INT DEFAULT 0,
   stealth INT DEFAULT 0,
   strength INT DEFAULT 10,
@@ -143,6 +145,9 @@ client.on("messageCreate", (message) => {
     case "dice":
       dice(message, command, db);
       break;
+    case "skin":
+      skin(message, command, db, handleLevelUp);
+      break;
   }
 
   function handleLevelUp(userId) {
@@ -203,9 +208,10 @@ client.on("messageCreate", (message) => {
     const defaultWheat = 0;
     const defaultBread = 0;
     const defaultStone = 0;
+    const defaultSkin = 0;
 
     db.run(
-      `UPDATE users SET level = 1, exp = 0, health = ?, strength = ?, fish = ?, meat = ?, stealth = ?, wood = ?, wheat = ?, bread = ?, stone = ? WHERE id = ?`,
+      `UPDATE users SET level = 1, exp = 0, health = ?, strength = ?, fish = ?, meat = ?, stealth = ?, wood = ?, wheat = ?, bread = ?, stone = ?, skin = ? WHERE id = ?`,
       [
         defaultHealth,
         defaultStrength,
@@ -216,6 +222,7 @@ client.on("messageCreate", (message) => {
         defaultWheat,
         defaultBread,
         defaultStone,
+        defaultSkin,
         userId,
       ],
       (err) => {
@@ -661,11 +668,11 @@ client.on("messageCreate", (message) => {
       health: 0,
     },
     wooden_sword: { gold: 100, strength: 10, health: 0 },
-    health_potion: { gold: 75, strength: 0, health: 110 },
+    health_potion: { gold: 75, strength: 0, health: 50 },
     wooden_bow: { gold: 150, strength: 12, health: 0 },
     leather_armor: { gold: 100, strength: 0, health: 10 },
-    sword: { gold: 1000, strength: 50, health: 50 },
-    bow: { gold: 500, strength: 25, health: 15 },
+    sword: { gold: 1000, strength: 100, health: 50 },
+    bow: { gold: 500, strength: 50, health: 15 },
     steel_sword: { gold: 10000, strength: 150, health: 40 },
     crossbow: { gold: 900, strength: 150, health: 20 },
     chainmail_armor: { gold: 800, strength: 0, health: 60 },
@@ -729,7 +736,7 @@ client.on("messageCreate", (message) => {
   }
 
   const training = {
-    novice: { gold: 1000, strength: 100, health: 0 },
+    novice: { gold: 1000, strength: 150, health: 0 },
     apprentice: { gold: 5000, strength: 250, health: 100 },
     master: { gold: 10000, strength: 500, health: 0 },
   };
