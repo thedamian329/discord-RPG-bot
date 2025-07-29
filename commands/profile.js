@@ -1,3 +1,7 @@
+function getDefaultHealthForLevel(level) {
+  return 50 * level;
+}
+
 function profile(message, command, db, handleLevelUp) {
   if (command === "profile") {
     db.get(
@@ -9,8 +13,9 @@ function profile(message, command, db, handleLevelUp) {
             "You are not registered. Use !register to sign up."
           );
         }
+        const maxHealth = getDefaultHealthForLevel(row.level);
         message.channel.send(
-          `Profile of ${row.username}: \nLevel: ${row.level} \nEXP: ${row.exp} \nGold: ${row.gold} \nWood: ${row.wood} \nStone: ${row.stone} \nFish: ${row.fish} \nStrength: ${row.strength} \nHealth: ${row.health} \nStealth: ${row.stealth} \nMeat: ${row.meat} \nWheat: ${row.wheat} \nBread: ${row.bread} \nSkin: ${row.skin} \nDeaths: ${row.death} \nPvp: ${row.pvp} \nDungeon: ${row.dungeon}`
+          `Profile of ${row.username}: \nLevel: ${row.level} \nEXP: ${row.exp} \nGold: ${row.gold} \nWood: ${row.wood} \nStone: ${row.stone} \nFish: ${row.fish} \nStrength: ${row.strength} \nHealth: ${row.health}/${maxHealth} \nStealth: ${row.stealth} \nMeat: ${row.meat} \nWheat: ${row.wheat} \nBread: ${row.bread} \nSkin: ${row.skin} \nDeaths: ${row.death} \nPvp: ${row.pvp} \nDungeon: ${row.dungeon}`
         );
       }
     );
