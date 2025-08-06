@@ -396,7 +396,7 @@ client.on("messageCreate", (message) => {
         let totalExpEarned = 0;
         let battleLog = `**YOU ENTERED A DUNGEON!**\n\n`;
         let survivedDungeon = true;
-        let initialHealth = player.health;
+        let initialHealth = player.health; // try changing this to level default health
 
         const battleNextEnemy = (index) => {
           if (index >= enemySequence.length) {

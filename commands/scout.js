@@ -49,7 +49,7 @@ function scout(message, db, command, client) {
           );
         }
 
-        let info = `🔍 You successfully scouted **${
+        let info = `You successfully scouted **${
           message.mentions.users.first()?.username || "the target"
         }** and found:\n`;
 
