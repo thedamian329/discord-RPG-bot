@@ -28,8 +28,6 @@ const scout = require("./commands/scout");
 const dice = require("./commands/dice");
 const skin = require("./commands/skin");
 
-//testing to see if this actually goes where its supposed to
-
 // Connect to the SQLite database
 let db = new sqlite3.Database("./rpg.db", (err) => {
   if (err) {
