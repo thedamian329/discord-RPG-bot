@@ -1,0 +1,114 @@
+[
+  {
+    "name": "slime",
+    "health": 50,
+    "strength": 20,
+    "exp": 10,
+    "gold": 5
+  },
+
+  {
+    "name": "wolf",
+    "health": 100,
+    "strength": 50,
+    "exp": 25,
+    "gold": 10
+  },
+
+  {
+    "name": "crab",
+    "health": 250,
+    "strength": 30,
+    "exp": 25,
+    "gold": 15
+  },
+
+  {
+    "name": "goblin",
+    "health": 500,
+    "strength": 50,
+    "exp": 50,
+    "gold": 25,
+    "gimmick": "steals 10 gold on hit"
+  },
+
+  {
+    "name": "spider",
+    "health": 750,
+    "strength": 150,
+    "exp": 75,
+    "gold": 50,
+    "gimmick": "poison"
+  },
+
+  {
+    "name": "troll",
+    "health": 1000,
+    "strength": 200,
+    "exp": 100,
+    "gold": 100,
+    "gimmick": "block"
+  },
+
+  {
+    "name": "orc",
+    "health": 1500,
+    "strength": 300,
+    "exp": 150,
+    "gold": 120,
+    "gimmick": "enrage"
+  },
+
+  {
+    "name": "orgre",
+    "health": 2000,
+    "strength": 500,
+    "exp": 200,
+    "gold": 200
+  },
+
+  {
+    "name": "ent",
+    "health": 4000,
+    "strength": 600,
+    "exp": 350,
+    "gold": 200,
+    "gimmick": "block"
+  },
+
+  {
+    "name": "knight",
+    "health": 5000,
+    "strength": 2000,
+    "exp": 1000,
+    "gold": 500,
+    "gimmick": "block"
+  },
+
+  {
+    "name": "vampire",
+    "health": 10000,
+    "strength": 5000,
+    "exp": 2000,
+    "gold": 1000,
+    "gimmick": "heals on crit"
+  },
+
+  {
+    "name": "dragon",
+    "health": 250000,
+    "strength": 15000,
+    "exp": 5000,
+    "gold": 2500,
+    "gimmick": "fire breath"
+  },
+
+  {
+    "name": "uncle donnie",
+    "health": 1000000,
+    "strength": 100000,
+    "exp": 100000,
+    "gold": 100000,
+    "gimmick": "a little reverse action"
+  }
+]
