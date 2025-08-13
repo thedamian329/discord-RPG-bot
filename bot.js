@@ -236,77 +236,166 @@ client.on("messageCreate", (message) => {
 
   module.exports = { resetToLevel1 };
 
-  const enemies = {
-    slime: { health: 50, strength: 20, exp: 10, gold: 5 },
-    wolf: { health: 100, strength: 50, exp: 25, gold: 10 },
-    crab: { health: 200, strength: 30, exp: 25, gold: 15 },
-    goblin: { health: 500, strength: 50, exp: 50, gold: 25 },
-    spider: { health: 800, strength: 150, exp: 75, gold: 50 },
-    zombie: { health: 2000, strength: 50, exp: 0, gold: 100 },
-    orc: { health: 1600, strength: 300, exp: 150, gold: 100 },
-    ogre: { health: 2000, strength: 500, exp: 200, gold: 150 },
-    troll: { health: 4000, strength: 500, exp: 350, gold: 200 },
-    knight: { health: 5000, strength: 2000, exp: 1000, gold: 500 },
-    vampire: { health: 10000, strength: 5000, exp: 2000, gold: 1000 },
-    dragon: { health: 250000, strength: 15000, exp: 2000, gold: 2500 },
-    uncle_donnie: { health: 1000000, strength: 100000, exp: 5000, gold: 10000 },
-  };
+  const fs = require("fs");
+  const enemies = JSON.parse(fs.readFileSync("./enemies.json", "utf8"));
 
   if (command === "npc") {
-    let npcList = "List of enemies you can attack:\n";
-    for (const enemy in enemies) {
-      npcList += `**${enemy}** - Health: ${enemies[enemy].health}, Strength: ${enemies[enemy].strength}, EXP: ${enemies[enemy].exp}, Gold: ${enemies[enemy].gold}\n`;
+    let npcList = "**📜 NPC List**\n\n";
+
+    enemies.forEach((enemy) => {
+      npcList +=
+        `**${enemy.name}**\n` +
+        `Health: ${enemy.health}\n` +
+        `Strength: ${enemy.strength}\n` +
+        `EXP: ${enemy.exp}\n` +
+        `Gold: ${enemy.gold}\n` +
+        (enemy.gimmick ? `🎭 Gimmick: ${enemy.gimmick}\n` : "") +
+        `\n`;
+    });
+
+    // fixes the discord message limit of 2000 characters
+    if (npcList.length > 2000) {
+      const chunks = npcList.match(/[\s\S]{1,1999}/g);
+      chunks.forEach((chunk) => message.channel.send(chunk));
+    } else {
+      message.channel.send(npcList);
     }
-    message.channel
-      .send(npcList)
-      .catch((error) => console.error("failed to send:", error));
   }
 
   if (command === "attack") {
-    const enemyType = args[0];
-    const enemy = enemies[enemyType];
+    const enemyName = args.join(" ").toLowerCase();
+    const enemyData = enemies.find((e) => e.name.toLowerCase() === enemyName);
 
-    if (!enemy) {
+    if (!enemyData) {
       return message.channel.send("Invalid enemy type.");
     }
 
     db.get(
       `SELECT * FROM users WHERE id = ?`,
       [message.author.id],
-      (err, player) => {
-        if (err) {
-          return console.error(err.message);
-        }
-        if (!player) {
+      async (err, player) => {
+        if (err) return console.error(err.message);
+        if (!player)
           return message.channel.send(
             "You are not registered. Use !register to sign up."
           );
-        }
-
-        let playerAttack = Math.max(0, player.strength);
-        let enemyAttack = Math.max(0, enemy.strength);
 
         let playerHealth = player.health;
-        let enemyHealth = enemy.health;
+        let enemyHealth = enemyData.health;
+        let playerStrength = player.strength;
+        let enemyStrength = enemyData.strength;
 
-        let battleLog = `**Battle with a ${enemyType}!**\n\n`;
+        let poisonStacks = 0;
+        let enraged = false;
+
+        const critChance = 0.15;
+        const critMultiplier = 2;
+        const playerBlockChance = 0.2;
+        const enemyBlockChance = enemyData.gimmick === "block" ? 0.25 : 0;
+
+        message.channel.send(
+          `⚔️ **Battle Start!** You're fighting a **${enemyData.name}**!`
+        );
 
         while (playerHealth > 0 && enemyHealth > 0) {
-          enemyHealth -= playerAttack;
-          battleLog += `You attack the ${enemyType} for ${playerAttack} damage.\n`;
-          if (enemyHealth <= 0) {
-            battleLog += `The ${enemyType} has been defeated!\n`;
+          await new Promise((res) => setTimeout(res, 1500));
+
+          // --- Player's Turn ---
+          let playerCrit = Math.random() < critChance;
+          let playerDamage = playerStrength * (playerCrit ? critMultiplier : 1);
+
+          // Enemy blocks?
+          if (Math.random() < enemyBlockChance) {
+            message.channel.send(
+              `🛡️ The ${enemyData.name} blocked your attack!`
+            );
+            playerDamage = 0;
+          }
+
+          enemyHealth -= playerDamage;
+          message.channel.send(
+            `🗡️ You hit the ${enemyData.name} for **${playerDamage}** damage${
+              playerCrit ? " (CRIT!)" : ""
+            }.`
+          );
+
+          if (
+            enemyData.gimmick === "enrage" &&
+            !enraged &&
+            enemyHealth <= enemyData.health * 0.4
+          ) {
+            enemyStrength *= 1.5;
+            enraged = true;
+            message.channel.send(`💢 The ${enemyData.name} becomes ENRAGED!`);
+          }
+
+          if (enemyHealth <= 0) break;
+
+          await new Promise((res) => setTimeout(res, 1500));
+
+          if (enemyData.gimmick === "a little reverse action") {
+            message.channel.send(
+              `☠️ ${enemyData.name} How about a litlle reverse action!`
+            );
+            playerHealth = 0;
             break;
           }
 
-          playerHealth -= enemyAttack;
-          battleLog += `The ${enemyType} attacks you for ${enemyAttack} damage.\n`;
-          if (playerHealth <= 0) {
-            battleLog += `You have been defeated by the ${enemyType}.\n`;
-            break;
+          let playerBlocked = Math.random() < playerBlockChance;
+          let enemyCrit = Math.random() < critChance;
+          let enemyDamage = enemyStrength * (enemyCrit ? critMultiplier : 1);
+
+          if (enemyData.gimmick === "fire breath" && Math.random() < 0.05) {
+            enemyDamage += 1000;
+            message.channel.send(`🔥 ${enemyData.name} uses FIRE BREATH!`);
           }
 
-          battleLog += `\n`;
+          if (playerBlocked) {
+            message.channel.send(
+              `🛡️ You blocked the ${enemyData.name}'s attack!`
+            );
+            enemyDamage = 0;
+          }
+
+          if (enemyData.gimmick === "heals on crit" && enemyCrit) {
+            let healAmt = Math.floor(enemyDamage * 0.3);
+            enemyHealth += healAmt;
+            message.channel.send(
+              `🩸 ${enemyData.name} heals for ${healAmt} HP from their CRIT!`
+            );
+          }
+
+          if (enemyData.gimmick === "poison" && Math.random() < 0.3) {
+            poisonStacks++;
+            message.channel.send(
+              `☠️ You have been poisoned! (${poisonStacks} stacks)`
+            );
+          }
+
+          if (enemyData.gimmick?.startsWith("steals")) {
+            let stolen = Math.min(10, player.gold);
+            player.gold -= stolen;
+            message.channel.send(
+              `💰 The ${enemyData.name} steals ${stolen} gold from you!`
+            );
+          }
+
+          playerHealth -= enemyDamage;
+          if (enemyDamage > 0) {
+            message.channel.send(
+              `⚔️ ${enemyData.name} hits you for **${enemyDamage}** damage${
+                enemyCrit ? " (CRIT!)" : ""
+              }.`
+            );
+          }
+
+          if (poisonStacks > 0) {
+            let poisonDamage = poisonStacks * 50;
+            playerHealth -= poisonDamage;
+            message.channel.send(
+              `☠️ Poison deals ${poisonDamage} extra damage to you!`
+            );
+          }
         }
 
         if (playerHealth <= 0) {
@@ -314,47 +403,33 @@ client.on("messageCreate", (message) => {
             `UPDATE users SET health = 0, death = death + 1 WHERE id = ?`,
             [message.author.id],
             (err) => {
-              if (err) {
-                return console.error(err.message);
-              }
-              message.channel.send(battleLog);
+              if (err) return console.error(err.message);
               resetToLevel1(message.author.id);
-            }
-          );
-        } else if (enemyHealth <= 0) {
-          const newExp = player.exp + enemy.exp;
-          const newGold = player.gold + enemy.gold;
-
-          db.run(
-            `UPDATE users SET health = ?, exp = ?, gold = ? WHERE id = ?`,
-            [playerHealth, player.exp + enemy.exp, newGold, message.author.id],
-            (err) => {
-              if (err) {
-                return console.error(err.message);
-              }
               message.channel.send(
-                `${battleLog}\nYou defeated the ${enemyType} and earned ${enemy.exp} EXP and ${enemy.gold} gold! You have ${playerHealth} health remaining.`
+                `💀 You have been defeated by the ${enemyData.name}...`
               );
-              handleLevelUp(message.author.id);
             }
           );
         } else {
+          const newExp = player.exp + enemyData.exp;
+          const newGold = player.gold + enemyData.gold;
+
           db.run(
-            `UPDATE users SET health = ? WHERE id = ?`,
-            [playerHealth, message.author.id],
+            `UPDATE users SET health = ?, exp = ?, gold = ? WHERE id = ?`,
+            [playerHealth, newExp, newGold, message.author.id],
             (err) => {
-              if (err) {
-                return console.error(err.message);
-              }
+              if (err) return console.error(err.message);
               message.channel.send(
-                `${battleLog}\nYou attacked the ${enemyType} and have ${playerHealth} health remaining.`
+                `You defeated the ${enemyData.name} and earned ${enemyData.exp} EXP and ${enemyData.gold} gold!`
               );
+              handleLevelUp(message.author.id);
             }
           );
         }
       }
     );
   }
+
   // test enemies for now
   const dungeonEnemies = {
     slime: { health: 1000, strength: 150, exp: 100, gold: 50 },
