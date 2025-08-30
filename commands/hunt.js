@@ -30,7 +30,9 @@ function resetToLevel1(userId, db, client) {
 
       const user = client.users.cache.get(userId);
       if (user) {
-        user.send(`You died. Time to start over.`);
+        user
+          .send(`You died. Time to start over.`)
+          .catch((error) => console.error("Failed to send message:", error));;
       }
     }
   );
