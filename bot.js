@@ -178,11 +178,16 @@ client.on("messageCreate", (message) => {
               if (err) {
                 return console.error(err.message);
               }
-              client.users.cache
-                .get(userId)
-                .send(
-                  `You're now level ${newLevel}! Your health has increased to ${newHealth} and your strength is now ${newStrength}`
-                );
+              try {
+                client.users.cache
+                  .get(userId)
+                  .send(
+                    `You're now level ${newLevel}! Your health has increased to ${newHealth} and your strength is now ${newStrength}`
+                  );
+              }
+              catch (err) {
+                console.error(err);
+              }
             }
           );
         }
