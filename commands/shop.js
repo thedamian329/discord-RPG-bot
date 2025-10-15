@@ -1,6 +1,7 @@
 const shopInventory = {
   wooden_sword: { gold: 100, strength: 10, health: 0 },
   health_potion: { gold: 75, strength: 0, health: 50 },
+  mana_potion: { gold: 50, strength: 0, health: 0, mana: 100 },
   wooden_bow: { gold: 150, strength: 12, health: 0 },
   leather_armor: { gold: 100, strength: 0, health: 10 },
   sword: { gold: 1000, strength: 100, health: 50 },
@@ -24,7 +25,7 @@ function shop(message, command, db, handleLevelUp) {
     let shopList =
       "List of items in shop. Heal up to full before purchasing anything:\n";
     for (const shop in shopInventory) {
-      shopList += `**${shop}** - Gold: ${shopInventory[shop].gold}, Strength: ${shopInventory[shop].strength}, health ${shopInventory[shop].health}\n`;
+      shopList += `**${shop}** - Gold: ${shopInventory[shop].gold}, Strength: ${shopInventory[shop].strength}, mana: ${shopInventory[shop].mana}, health ${shopInventory[shop].health}\n`;
     }
     message.channel
       .send(shopList)

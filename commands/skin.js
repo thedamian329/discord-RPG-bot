@@ -20,7 +20,6 @@ function skin(message, command, db, handleLevelUp) {
         const skinPelt = Math.random() < 0.75;
         const ruinedPelt = Math.random() < 0.25;
 
-        // Deduct 1 meat regardless of success/failure
         db.run(
           `UPDATE users SET meat = meat - 1 WHERE id = ?`,
           [message.author.id],

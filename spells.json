@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Fireball",
+    "damage": 150,
+    "manaCost": 25,
+    "description": "A ball of fire that deals damage to a single target.",
+    "levelRequirement": 0
+  },
+
+  {
+    "name": "frostbolt",
+    "damage": 200,
+    "manaCost": 50,
+    "description": "A bolt of frost that slows the target and deals damage.",
+    "levelRequirement": 5
+  }
+]

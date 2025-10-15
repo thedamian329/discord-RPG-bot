@@ -27,6 +27,7 @@ const help = require("./commands/help");
 const scout = require("./commands/scout");
 const dice = require("./commands/dice");
 const skin = require("./commands/skin");
+const magictraining = require("./commands/magictraining");
 
 // Connect to the SQLite database
 let db = new sqlite3.Database("./rpg.db", (err) => {
@@ -54,6 +55,9 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
   meat INT DEFAULT 0,
   skin INT DEFAULT 0,
   pvp INT DEFAULT 0,
+  magic_level INT DEFAULT 0,
+  mana INT DEFAULT 0,
+  magic_exp INT DEFAULT 0,
   stealth INT DEFAULT 0,
   strength INT DEFAULT 10,
   wood INT DEFAULT 0,
@@ -148,16 +152,20 @@ client.on("messageCreate", (message) => {
     case "skin":
       skin(message, command, db, handleLevelUp);
       break;
+    case "trainmagic":
+      magictraining(message, command, db, handleLevelUp);
+      break;
   }
 
   function handleLevelUp(userId) {
     db.get(
-      `SELECT level, exp, health, strength FROM users WHERE id = ?`,
+      `SELECT level, exp, health, strength, mana FROM users WHERE id = ?`,
       [userId],
       (err, row) => {
         if (err) {
           return console.error(err.message);
         }
+        if (!row) return; // User not found
 
         let requiredExp = getRequiredExp(row.level);
         if (row.exp >= requiredExp) {
@@ -173,7 +181,7 @@ client.on("messageCreate", (message) => {
 
           db.run(
             `UPDATE users SET level = ?, exp = exp - ?, health = ?, strength = ? WHERE id = ?`,
-            [newLevel, requiredExp, newHealth, newStrength, userId],
+            [newLevel, requiredExp, newHealth, newStrength, newMana, userId],
             (err) => {
               if (err) {
                 return console.error(err.message);
@@ -181,9 +189,11 @@ client.on("messageCreate", (message) => {
               client.users.cache
                 .get(userId)
                 .send(
-                  `You're now level ${newLevel}! Your health has increased to ${newHealth} and your strength is now ${newStrength}`
+                  `You're now level ${newLevel}! Your health has increased to ${newHealth}, your strength is now ${newStrength}.`
                 )
-                .catch((error) => console.error("Failed to send message:", error));
+                .catch((error) =>
+                  console.error("Failed to send message:", error)
+                );
             }
           );
         }
@@ -195,8 +205,16 @@ client.on("messageCreate", (message) => {
     return 500 * level;
   }
 
+  function getRequiredMagicExp(level) {
+    return 300 * level;
+  }
+
   function getDefaultHealthForLevel(level) {
     return 50 * level;
+  }
+
+  function getDefaultManaForLevel(level) {
+    return 150 * level;
   }
 
   function resetToLevel1(userId) {
@@ -204,6 +222,9 @@ client.on("messageCreate", (message) => {
     const defaultStrength = 10;
     const defaultFish = 0;
     const defaultMeat = 0;
+    const defaultMagicLevel = 0;
+    const defaultMana = 0;
+    const defaultMagicExp = 0;
     const defaultStealth = 0;
     const defaultWood = 0;
     const defaultWheat = 0;
@@ -212,7 +233,7 @@ client.on("messageCreate", (message) => {
     const defaultSkin = 0;
 
     db.run(
-      `UPDATE users SET level = 1, exp = 0, health = ?, strength = ?, fish = ?, meat = ?, stealth = ?, wood = ?, wheat = ?, bread = ?, stone = ?, skin = ? WHERE id = ?`,
+      `UPDATE users SET level = 1, exp = 0, health = ?, strength = ?, fish = ?, meat = ?, stealth = ?, wood = ?, wheat = ?, bread = ?, stone = ?, skin = ?, magic_level = ?, magic_exp = ?, mana = ? WHERE id = ?`,
       [
         defaultHealth,
         defaultStrength,
@@ -224,13 +245,17 @@ client.on("messageCreate", (message) => {
         defaultBread,
         defaultStone,
         defaultSkin,
+        defaultMagicLevel,
+        defaultMagicExp,
+        defaultMana,
         userId,
       ],
       (err) => {
         if (err) {
           return console.error(err.message);
         }
-        client.users.cache.get(userId)
+        client.users.cache
+          .get(userId)
           .send(`You died. Time to start over`)
           .catch((error) => console.error("Failed to send message:", error));
       }
@@ -747,6 +772,7 @@ client.on("messageCreate", (message) => {
     },
     wooden_sword: { gold: 100, strength: 10, health: 0 },
     health_potion: { gold: 75, strength: 0, health: 50 },
+    mana_potion: { gold: 50, strength: 0, health: 0, mana: 100 },
     wooden_bow: { gold: 150, strength: 12, health: 0 },
     leather_armor: { gold: 100, strength: 0, health: 10 },
     sword: { gold: 1000, strength: 100, health: 50 },
@@ -776,7 +802,7 @@ client.on("messageCreate", (message) => {
     }
 
     db.get(
-      `SELECT gold, strength, health FROM users WHERE id = ?`,
+      `SELECT gold, strength, health, mana FROM users WHERE id = ?`,
       [message.author.id],
       (err, row) => {
         if (err) {
@@ -796,16 +822,17 @@ client.on("messageCreate", (message) => {
         const newGold = row.gold - item.gold;
         const newStrength = row.strength + item.strength;
         const newHealth = row.health + item.health;
+        const newMana = row.mana + item.mana;
 
         db.run(
-          `UPDATE users SET gold = ?, strength = ?, health = ? WHERE id = ?`,
-          [newGold, newStrength, newHealth, message.author.id],
+          `UPDATE users SET gold = ?, strength = ?, health = ?, mana = ? WHERE id = ?`,
+          [newGold, newStrength, newHealth, newMana, message.author.id],
           function (err) {
             if (err) {
               return console.error(err.message);
             }
             message.channel.send(
-              `You bought a ${itemName}! Your new stats are:\nGold: ${newGold}\nStrength: ${newStrength}\nHealth: ${newHealth}`
+              `You bought a ${itemName}! Your new stats are:\nGold: ${newGold}\nStrength: ${newStrength}\nHealth: ${newHealth} \nMana: ${newMana}`
             );
           }
         );
