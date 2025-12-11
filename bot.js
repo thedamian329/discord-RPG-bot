@@ -322,7 +322,7 @@ client.on("messageCreate", (message) => {
         const enemyBlockChance = enemyData.gimmick === "block" ? 0.25 : 0;
 
         message.channel.send(
-          `⚔️ **Battle Start!** You're fighting a **${enemyData.name}**!`
+          `**Battle Start!** You're fighting a **${enemyData.name}**!`
         );
 
         while (playerHealth > 0 && enemyHealth > 0) {
@@ -335,14 +335,14 @@ client.on("messageCreate", (message) => {
           // Enemy blocks?
           if (Math.random() < enemyBlockChance) {
             message.channel.send(
-              `🛡️ The ${enemyData.name} blocked your attack!`
+              `The ${enemyData.name} blocked your attack!`
             );
             playerDamage = 0;
           }
 
           enemyHealth -= playerDamage;
           message.channel.send(
-            `🗡️ You hit the ${enemyData.name} for **${playerDamage}** damage${
+            `You hit the ${enemyData.name} for **${playerDamage}** damage${
               playerCrit ? " (CRIT!)" : ""
             }.`
           );
@@ -354,7 +354,7 @@ client.on("messageCreate", (message) => {
           ) {
             enemyStrength *= 1.5;
             enraged = true;
-            message.channel.send(`💢 The ${enemyData.name} becomes ENRAGED!`);
+            message.channel.send(`The ${enemyData.name} becomes ENRAGED!`);
           }
 
           if (enemyHealth <= 0) break;
@@ -375,7 +375,7 @@ client.on("messageCreate", (message) => {
 
           if (enemyData.gimmick === "fire breath" && Math.random() < 0.05) {
             enemyDamage += 1000;
-            message.channel.send(`🔥 ${enemyData.name} uses FIRE BREATH!`);
+            message.channel.send(`${enemyData.name} uses FIRE BREATH!`);
           }
 
           if (playerBlocked) {
@@ -389,14 +389,14 @@ client.on("messageCreate", (message) => {
             let healAmt = Math.floor(enemyDamage * 0.3);
             enemyHealth += healAmt;
             message.channel.send(
-              `🩸 ${enemyData.name} heals for ${healAmt} HP from their CRIT!`
+              `${enemyData.name} heals for ${healAmt} HP from their CRIT!`
             );
           }
 
           if (enemyData.gimmick === "poison" && Math.random() < 0.3) {
             poisonStacks++;
             message.channel.send(
-              `☠️ You have been poisoned! (${poisonStacks} stacks)`
+              `You have been poisoned! (${poisonStacks} stacks)`
             );
           }
 
@@ -404,14 +404,14 @@ client.on("messageCreate", (message) => {
             let stolen = Math.min(10, player.gold);
             player.gold -= stolen;
             message.channel.send(
-              `💰 The ${enemyData.name} steals ${stolen} gold from you!`
+              `The ${enemyData.name} steals ${stolen} gold from you!`
             );
           }
 
           playerHealth -= enemyDamage;
           if (enemyDamage > 0) {
             message.channel.send(
-              `⚔️ ${enemyData.name} hits you for **${enemyDamage}** damage${
+              `${enemyData.name} hits you for **${enemyDamage}** damage${
                 enemyCrit ? " (CRIT!)" : ""
               }.`
             );
@@ -421,7 +421,7 @@ client.on("messageCreate", (message) => {
             let poisonDamage = poisonStacks * 50;
             playerHealth -= poisonDamage;
             message.channel.send(
-              `☠️ Poison deals ${poisonDamage} extra damage to you!`
+              `Poison deals ${poisonDamage} extra damage to you!`
             );
           }
         }
@@ -434,7 +434,7 @@ client.on("messageCreate", (message) => {
               if (err) return console.error(err.message);
               resetToLevel1(message.author.id);
               message.channel.send(
-                `💀 You have been defeated by the ${enemyData.name}...`
+                `You have been defeated by the ${enemyData.name}...`
               );
             }
           );
